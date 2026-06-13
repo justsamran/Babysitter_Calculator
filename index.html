@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <title>Babysitter Calculator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #fdf6f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 24px 12px 80px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 24px 20px;
+      width: 100%;
+      max-width: 520px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+
+    @media (min-width: 480px) {
+      body { padding: 40px 16px 80px; }
+      .card { padding: 36px; }
+    }
+
+    /* Header */
+    .header-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      gap: 8px;
+    }
+    h1 { font-size: 1.4rem; font-weight: 700; color: #1a1a1a; }
+    .subtitle { color: #888; font-size: 0.88rem; margin-bottom: 24px; }
+
+    /* Sheets badge */
+    .sheets-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 6px 10px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+      border: none;
+      touch-action: manipulation;
+    }
+    .sheets-badge.connected { background: #e8f5e9; color: #2e7d32; outline: 1.5px solid #c8e6c9; }
+    .sheets-badge.disconnected { background: #fff3e0; color: #e65100; outline: 1.5px solid #ffe0b2; }
+    .sheets-badge:active { opacity: 0.7; }
+
+    /* Month + Year row */
+    .month-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .month-row label { font-weight: 600; color: #444; font-size: 0.9rem; }
+
+    .select-wrap {
+      flex: 1;
+      min-width: 0;
+      position: relative;
+    }
+    .select-wrap::after {
+      content: '';
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 10px;
+      height: 6px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      pointer-events: none;
+    }
+    .select-wrap select {
+      width: 100%;
+      padding: 11px 32px 11px 12px;
+      border: 1.5px solid #e8e0d8;
+      border-radius: 10px;
+      font-size: 0.92rem;
+      color: #1a1a1a;
+      background: #fdf6f0;
+      cursor: pointer;
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+      touch-action: manipulation;
+    }
+    .select-wrap select:focus { border-color: #f5a623; }
+
+    .year-wrap { max-width: 110px; }
+
+    .section-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #bbb;
+      margin-bottom: 10px;
+    }
+
+    /* Sessions */
+    .sessions { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+
+    .session-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1.5px solid #f0e8df;
+      background: #fffaf6;
+      transition: border-color 0.15s;
+      touch-action: manipulation;
+    }
+    .session-row.active { border-color: #f5a623; background: #fffbf5; }
+
+    .session-info { flex: 1; min-width: 0; }
+    .session-name { font-weight: 600; color: #1a1a1a; font-size: 0.88rem; }
+    .session-rate { font-size: 0.78rem; color: #999; margin-top: 1px; }
+
+    .session-subtotal {
+      font-weight: 600;
+      color: #f5a623;
+      font-size: 0.85rem;
+      min-width: 58px;
+      text-align: right;
+    }
+    .session-subtotal.zero { color: #ddd; }
+
+    .qty-control { display: flex; align-items: center; gap: 4px; }
+
+    .qty-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1.5px solid #e8e0d8;
+      background: white;
+      font-size: 1.2rem;
+      color: #888;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.1s;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      flex-shrink: 0;
+    }
+    .qty-btn:active { border-color: #f5a623; color: #f5a623; background: #fffaf6; transform: scale(0.9); }
+
+    .qty-input {
+      width: 36px;
+      text-align: center;
+      border: 1.5px solid #e8e0d8;
+      border-radius: 8px;
+      padding: 6px 2px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #1a1a1a;
+      background: white;
+      outline: none;
+      -webkit-appearance: none;
+    }
+    .qty-input:focus { border-color: #f5a623; }
+
+    /* Total */
+    .total-box {
+      background: linear-gradient(135deg, #f5a623 0%, #f07b0a 100%);
+      border-radius: 14px;
+      padding: 18px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .total-label { color: rgba(255,255,255,0.85); font-size: 0.85rem; font-weight: 600; }
+    .total-amount { color: white; font-size: 1.7rem; font-weight: 800; letter-spacing: -0.02em; }
+
+    /* Actions */
+    .actions { display: flex; gap: 10px; }
+    .btn {
+      flex: 1;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s;
+      touch-action: manipulation;
+    }
+    .btn-secondary { background: #f5efe8; color: #888; }
+    .btn-primary { background: #1a1a1a; color: white; }
+    .btn:active { transform: scale(0.97); opacity: 0.85; }
+
+    .divider { height: 1px; background: #f5ede3; margin: 22px 0; }
+
+    /* History */
+    .history-empty { text-align: center; color: #ccc; font-size: 0.85rem; padding: 16px 0; }
+
+    .history-item {
+      border: 1.5px solid #f0e8df;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+    .history-header { display: flex; justify-content: space-between; align-items: center; }
+    .history-month { font-weight: 700; font-size: 0.92rem; color: #1a1a1a; }
+    .history-total { font-weight: 700; color: #f5a623; font-size: 0.95rem; }
+
+    .history-detail {
+      display: none;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #f5ede3;
+      font-size: 0.8rem;
+      color: #888;
+      line-height: 1.9;
+    }
+    .history-item.open .history-detail { display: block; }
+
+    .history-meta { display: flex; align-items: center; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+    .history-delete {
+      font-size: 0.78rem; color: #f5a623; text-decoration: underline;
+      background: none; border: none; cursor: pointer; padding: 0;
+      touch-action: manipulation;
+    }
+    .sheet-tag {
+      font-size: 0.7rem; background: #e8f5e9; color: #2e7d32;
+      padding: 2px 8px; border-radius: 20px;
+    }
+
+    /* ── MODAL ─────────────────────────────────────────── */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 100;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 0;
+    }
+    @media (min-width: 480px) {
+      .overlay { align-items: center; padding: 20px; }
+      .modal { border-radius: 20px; max-height: 90vh; }
+    }
+    .overlay.show { display: flex; }
+
+    .modal {
+      background: white;
+      border-radius: 20px 20px 0 0;
+      padding: 28px 24px;
+      width: 100%;
+      max-width: 480px;
+      max-height: 92vh;
+      overflow-y: auto;
+      box-shadow: 0 -4px 40px rgba(0,0,0,0.18);
+    }
+
+    .modal-drag { width: 40px; height: 4px; background: #e0d8d0; border-radius: 2px; margin: 0 auto 20px; }
+    .modal-title { font-size: 1.05rem; font-weight: 700; color: #1a1a1a; margin-bottom: 6px; }
+    .modal-sub { font-size: 0.83rem; color: #888; margin-bottom: 22px; line-height: 1.5; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 6px; margin-bottom: 22px; }
+    .tab {
+      flex: 1; padding: 9px 8px; border-radius: 8px; font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; border: 1.5px solid #e8e0d8; background: white; color: #888;
+      transition: all 0.15s; touch-action: manipulation;
+    }
+    .tab.active { background: #1a1a1a; color: white; border-color: #1a1a1a; }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .steps { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }
+    .step { display: flex; gap: 12px; align-items: flex-start; }
+    .step-num {
+      width: 24px; height: 24px; background: #f5a623; color: white; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.72rem; font-weight: 700; flex-shrink: 0; margin-top: 1px;
+    }
+    .step-text { font-size: 0.84rem; color: #444; line-height: 1.5; }
+    .step-text a { color: #f5a623; }
+    .step-text strong { color: #1a1a1a; }
+
+    .code-block {
+      background: #1a1a1a; border-radius: 10px; padding: 14px 16px; margin: 12px 0;
+      font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.72rem; color: #f0e8d0;
+      line-height: 1.7; white-space: pre; overflow-x: auto; position: relative;
+    }
+    .copy-btn {
+      position: absolute; top: 8px; right: 8px; background: rgba(255,255,255,0.15);
+      border: none; color: white; font-size: 0.68rem; padding: 4px 8px;
+      border-radius: 6px; cursor: pointer; touch-action: manipulation;
+    }
+    .copy-btn:active { background: rgba(255,255,255,0.35); }
+
+    .url-input-wrap { margin-bottom: 16px; }
+    .url-label { font-size: 0.82rem; font-weight: 600; color: #444; margin-bottom: 6px; display: block; }
+    .url-input {
+      width: 100%; padding: 11px 14px; border: 1.5px solid #e8e0d8;
+      border-radius: 10px; font-size: 0.85rem; color: #1a1a1a; outline: none;
+    }
+    .url-input:focus { border-color: #f5a623; }
+    .url-input::placeholder { color: #ccc; }
+
+    .modal-actions { display: flex; gap: 10px; margin-top: 4px; }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 20px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #1a1a1a; color: white; padding: 12px 20px;
+      border-radius: 30px; font-size: 0.85rem; font-weight: 600;
+      z-index: 200; transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      white-space: nowrap; max-width: calc(100vw - 32px); text-align: center;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.success { background: #2e7d32; }
+    .toast.error { background: #c62828; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="header-row">
+    <h1>🍼 Babysitter</h1>
+    <button class="sheets-badge disconnected" id="sheetsBadge" onclick="openSetup()">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      <span id="badgeText">Connect Sheet</span>
+    </button>
+  </div>
+  <p class="subtitle">Monthly babysitting calculator</p>
+
+  <div class="month-row">
+    <label>Month</label>
+    <div class="select-wrap">
+      <select id="monthSelect"></select>
+    </div>
+    <div class="select-wrap year-wrap">
+      <select id="yearSelect"></select>
+    </div>
+  </div>
+
+  <div class="section-label">Sessions</div>
+  <div class="sessions" id="sessions"></div>
+
+  <div class="total-box">
+    <div class="total-label">Total for the month</div>
+    <div class="total-amount" id="totalAmount">R0</div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-secondary" onclick="resetAll()">Clear</button>
+    <button class="btn btn-primary" onclick="saveMonth()">Save Month</button>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section-label">History</div>
+  <div id="history"></div>
+</div>
+
+<!-- Setup Modal -->
+<div class="overlay" id="overlay" onclick="closeSetupOutside(event)">
+  <div class="modal">
+    <div class="modal-drag"></div>
+    <div class="modal-title">Settings</div>
+    <p class="modal-sub">Connect Google Sheets or get deploy instructions.</p>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('sheets', this)">📊 Google Sheets</button>
+      <button class="tab" onclick="switchTab('deploy', this)">🚀 Deploy to Vercel</button>
+    </div>
+
+    <!-- Google Sheets Tab -->
+    <div class="tab-panel active" id="tab-sheets">
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-text">
+            <strong>Create a new Google Sheet</strong><br>
+            Go to <a href="https://sheets.new" target="_blank">sheets.new</a>. Name it <em>Babysitter Records</em>.
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-text">
+            <strong>Open Apps Script</strong><br>
+            Click <strong>Extensions → Apps Script</strong>. Delete any existing code.
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-text"><strong>Paste this script</strong> then click Save (💾):</div>
+        </div>
+      </div>
+
+      <div class="code-block" id="scriptCode">function doPost(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName('Records') || ss.getActiveSheet();
+    var data = JSON.parse(e.postData.contents);
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow(['Month','Late Night Wkday','Early Night Wkday',
+        'Full Day Wkend','Half Day Wkend','Away Weekend','Away Week',
+        'Total (R)','Saved On']);
+    }
+    sheet.appendRow([
+      data.month,
+      data.late_night_weekday  || 0,
+      data.early_night_weekday || 0,
+      data.full_day_weekend    || 0,
+      data.half_day_weekend    || 0,
+      data.away_weekend        || 0,
+      data.away_week           || 0,
+      data.total,
+      new Date().toLocaleDateString('en-ZA')
+    ]);
+    return ContentService
+      .createTextOutput(JSON.stringify({success:true}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({success:false,error:err.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}<button class="copy-btn" onclick="copyScript()">Copy</button></div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-text">
+            Click <strong>Deploy → New deployment</strong>. Type: <strong>Web app</strong>. Execute as: <strong>Me</strong>. Access: <strong>Anyone</strong>. Click Deploy &amp; authorise.
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-text"><strong>Copy the Web App URL</strong> and paste below:</div>
+        </div>
+      </div>
+
+      <div class="url-input-wrap">
+        <label class="url-label" for="scriptUrl">Web App URL</label>
+        <input class="url-input" id="scriptUrl" type="url"
+          placeholder="https://script.google.com/macros/s/…/exec" />
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeSetup()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveScriptUrl()">Save & Connect</button>
+      </div>
+    </div>
+
+    <!-- Deploy Tab -->
+    <div class="tab-panel" id="tab-deploy">
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-text">Open <strong>Terminal</strong> on your Mac.</div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-text">Run these commands one at a time:</div>
+        </div>
+      </div>
+
+      <div class="code-block">npm install -g vercel<button class="copy-btn" onclick="copyText('npm install -g vercel', this)">Copy</button></div>
+
+      <div class="code-block" id="cdCmd">cd "/Users/samanthasnyman/Library/Application Support/Claude/local-agent-mode-sessions/a52f1d5e-224e-4330-a509-39a1b88b989b/43b235c7-729b-4b73-9f7c-21e256e24c5c/local_767230ba-a2ae-4808-aa9f-b83509300772/outputs"<button class="copy-btn" onclick="copyText(document.getElementById('cdCmd').innerText.replace('Copy','').trim(), this)">Copy</button></div>
+
+      <div class="code-block">vercel deploy --name babysitter-calculator<button class="copy-btn" onclick="copyText('vercel deploy --name babysitter-calculator', this)">Copy</button></div>
+
+      <div class="steps" style="margin-top:16px">
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-text">Vercel will ask you to log in and confirm settings. When done, it gives you a live URL you can open on any device.</div>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="margin-top:20px">
+        <button class="btn btn-primary" onclick="closeSetup()">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const RATES = [
+    { key: 'late_night_weekday',  label: 'Late night – Weekday',  rate: 320 },
+    { key: 'early_night_weekday', label: 'Early night – Weekday', rate: 160 },
+    { key: 'full_day_weekend',    label: 'Full day – Weekend',    rate: 520 },
+    { key: 'half_day_weekend',    label: 'Half day – Weekend',    rate: 370 },
+    { key: 'away_weekend',        label: 'Away – Weekend',        rate: 520 },
+    { key: 'away_week',           label: 'Away – Week',           rate: 160 },
+  ];
+
+  const MONTHS = ['January','February','March','April','May','June',
+                  'July','August','September','October','November','December'];
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+
+  // Month selector
+  const monthSel = document.getElementById('monthSelect');
+  MONTHS.forEach((m, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = m;
+    if (i === now.getMonth()) opt.selected = true;
+    monthSel.appendChild(opt);
+  });
+
+  // Year selector — 5 years back, 5 years forward
+  const yearSel = document.getElementById('yearSelect');
+  for (let y = currentYear - 5; y <= currentYear + 5; y++) {
+    const opt = document.createElement('option');
+    opt.value = y;
+    opt.textContent = y;
+    if (y === currentYear) opt.selected = true;
+    yearSel.appendChild(opt);
+  }
+
+  // Build session rows
+  const sessionsEl = document.getElementById('sessions');
+  RATES.forEach(r => {
+    const row = document.createElement('div');
+    row.className = 'session-row';
+    row.id = `row_${r.key}`;
+    row.innerHTML = `
+      <div class="session-info">
+        <div class="session-name">${r.label}</div>
+        <div class="session-rate">R${r.rate} each</div>
+      </div>
+      <div class="qty-control">
+        <button class="qty-btn" onclick="adjust('${r.key}',-1)">−</button>
+        <input class="qty-input" id="qty_${r.key}" type="number" inputmode="numeric" min="0" value="0"
+          oninput="calcTotal()" onchange="clampVal(this)"/>
+        <button class="qty-btn" onclick="adjust('${r.key}',1)">+</button>
+      </div>
+      <div class="session-subtotal zero" id="sub_${r.key}">R0</div>
+    `;
+    sessionsEl.appendChild(row);
+  });
+
+  function getQty(key) { return parseInt(document.getElementById(`qty_${key}`).value) || 0; }
+
+  function clampVal(input) {
+    if (parseInt(input.value) < 0 || input.value === '') input.value = 0;
+    calcTotal();
+  }
+
+  function adjust(key, delta) {
+    const input = document.getElementById(`qty_${key}`);
+    input.value = Math.max(0, (parseInt(input.value) || 0) + delta);
+    calcTotal();
+  }
+
+  function calcTotal() {
+    let total = 0;
+    RATES.forEach(r => {
+      const qty = getQty(r.key);
+      const sub = qty * r.rate;
+      total += sub;
+      const subEl = document.getElementById(`sub_${r.key}`);
+      const rowEl = document.getElementById(`row_${r.key}`);
+      subEl.textContent = `R${sub.toLocaleString()}`;
+      subEl.className = 'session-subtotal' + (sub === 0 ? ' zero' : '');
+      rowEl.className = 'session-row' + (qty > 0 ? ' active' : '');
+    });
+    document.getElementById('totalAmount').textContent = `R${total.toLocaleString()}`;
+    return total;
+  }
+
+  function resetAll() {
+    RATES.forEach(r => { document.getElementById(`qty_${r.key}`).value = 0; });
+    calcTotal();
+  }
+
+  function getSelectedMonthLabel() {
+    const m = MONTHS[parseInt(monthSel.value)];
+    const y = yearSel.value;
+    return `${m} ${y}`;
+  }
+
+  // ── History ──────────────────────────────────────────────
+
+  function getHistory() {
+    try { return JSON.parse(localStorage.getItem('babysitter_history') || '[]'); }
+    catch { return []; }
+  }
+  function saveHistoryData(h) { localStorage.setItem('babysitter_history', JSON.stringify(h)); }
+
+  async function saveMonth() {
+    const monthLabel = getSelectedMonthLabel();
+    const sessions = {};
+    let total = 0;
+    RATES.forEach(r => {
+      const qty = getQty(r.key);
+      sessions[r.key] = qty;
+      total += qty * r.rate;
+    });
+
+    if (total === 0) { showToast('Nothing to save — all sessions are 0.', 'error'); return; }
+
+    const h = getHistory();
+    const existing = h.findIndex(e => e.label === monthLabel);
+    const entry = { label: monthLabel, sessions, total, synced: false };
+
+    if (existing >= 0) {
+      if (!confirm(`${monthLabel} already saved. Overwrite?`)) return;
+      h[existing] = entry;
+    } else {
+      h.unshift(entry);
+    }
+
+    const scriptUrl = localStorage.getItem('babysitter_script_url');
+    if (scriptUrl) {
+      try {
+        await fetch(scriptUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ month: monthLabel, ...sessions, total })
+        });
+        entry.synced = true;
+        if (existing >= 0) h[existing] = entry; else h[0] = entry;
+        showToast('✓ Saved & synced to Google Sheets', 'success');
+      } catch {
+        showToast('Saved locally (Sheet sync failed)', 'error');
+      }
+    } else {
+      showToast('Saved locally — connect a Sheet to sync', '');
+    }
+
+    saveHistoryData(h);
+    renderHistory();
+    resetAll();
+  }
+
+  function renderHistory() {
+    const h = getHistory();
+    const el = document.getElementById('history');
+    if (h.length === 0) {
+      el.innerHTML = '<div class="history-empty">No saved months yet</div>';
+      return;
+    }
+    el.innerHTML = '';
+    h.forEach((entry, idx) => {
+      const detail = RATES
+        .filter(r => (entry.sessions[r.key] || 0) > 0)
+        .map(r => `${entry.sessions[r.key]}× ${r.label} = R${(entry.sessions[r.key] * r.rate).toLocaleString()}`)
+        .join('<br>');
+      const syncedTag = entry.synced ? `<span class="sheet-tag">✓ Synced</span>` : '';
+      const item = document.createElement('div');
+      item.className = 'history-item';
+      item.innerHTML = `
+        <div class="history-header" onclick="this.parentElement.classList.toggle('open')">
+          <span class="history-month">${entry.label}</span>
+          <span class="history-total">R${entry.total.toLocaleString()}</span>
+        </div>
+        <div class="history-detail">
+          ${detail || 'No session details.'}
+          <div class="history-meta">
+            ${syncedTag}
+            <button class="history-delete" onclick="deleteEntry(${idx}, event)">Delete</button>
+          </div>
+        </div>
+      `;
+      el.appendChild(item);
+    });
+  }
+
+  function deleteEntry(idx, e) {
+    e.stopPropagation();
+    if (!confirm('Delete this entry?')) return;
+    const h = getHistory();
+    h.splice(idx, 1);
+    saveHistoryData(h);
+    renderHistory();
+  }
+
+  // ── Modal / Tabs ──────────────────────────────────────────
+
+  function switchTab(name, btn) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(`tab-${name}`).classList.add('active');
+  }
+
+  function updateBadge() {
+    const url = localStorage.getItem('babysitter_script_url');
+    const badge = document.getElementById('sheetsBadge');
+    const text = document.getElementById('badgeText');
+    if (url) {
+      badge.className = 'sheets-badge connected';
+      text.textContent = 'Sheet Connected';
+    } else {
+      badge.className = 'sheets-badge disconnected';
+      text.textContent = 'Connect Sheet';
+    }
+  }
+
+  function openSetup() {
+    document.getElementById('scriptUrl').value = localStorage.getItem('babysitter_script_url') || '';
+    document.getElementById('overlay').classList.add('show');
+  }
+
+  function closeSetup() { document.getElementById('overlay').classList.remove('show'); }
+
+  function closeSetupOutside(e) {
+    if (e.target === document.getElementById('overlay')) closeSetup();
+  }
+
+  function saveScriptUrl() {
+    const url = document.getElementById('scriptUrl').value.trim();
+    if (!url) { showToast('Please paste your Web App URL', 'error'); return; }
+    if (!url.startsWith('https://script.google.com')) {
+      showToast("That doesn't look like an Apps Script URL", 'error'); return;
+    }
+    localStorage.setItem('babysitter_script_url', url);
+    updateBadge();
+    closeSetup();
+    showToast('✓ Google Sheet connected!', 'success');
+  }
+
+  function copyScript() {
+    const code = document.getElementById('scriptCode').innerText.replace('Copy','').trim();
+    navigator.clipboard.writeText(code).then(() => showToast('Script copied!', 'success'));
+  }
+
+  function copyText(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = '✓';
+      setTimeout(() => btn.textContent = orig, 1500);
+    });
+  }
+
+  // ── Toast ─────────────────────────────────────────────────
+
+  let toastTimer;
+  function showToast(msg, type) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast show ${type}`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.className = 'toast'; }, 3000);
+  }
+
+  // Init
+  updateBadge();
+  renderHistory();
+</script>
+</body>
+</html>
